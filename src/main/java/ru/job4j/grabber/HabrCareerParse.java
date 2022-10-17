@@ -20,7 +20,7 @@ public class HabrCareerParse {
         Elements rows = document.select(".vacancy-card__inner");
         rows.forEach(row -> {
             Element dateElement = row.select(".vacancy-card__date").first();
-            String data = dateElement.text();
+            String data = dateElement.child(0).attr("datetime");
             Element titleElement = row.select(".vacancy-card__title").first();
             Element linkElement = titleElement.child(0);
             String vacancyName = titleElement.text();
