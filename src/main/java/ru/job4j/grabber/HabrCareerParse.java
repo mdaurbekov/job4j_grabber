@@ -23,7 +23,7 @@ public class HabrCareerParse {
         rows.forEach(row -> {
             Element dateElement = row.select(".vacancy-card__date").first().child(0);
             HabrCareerDateTimeParser habrCareerDateTimeParser = new HabrCareerDateTimeParser();
-            LocalDateTime data = habrCareerDateTimeParser.parse(dateElement.attr("datetime")) ;
+            LocalDateTime data = habrCareerDateTimeParser.parse(dateElement.attr("datetime"));
             Element titleElement = row.select(".vacancy-card__title").first();
             Element linkElement = titleElement.child(0);
             String vacancyName = titleElement.text();
