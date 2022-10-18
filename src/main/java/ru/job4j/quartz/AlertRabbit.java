@@ -8,8 +8,6 @@ import org.quartz.impl.StdSchedulerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import static org.quartz.JobBuilder.newJob;
@@ -21,21 +19,22 @@ public class AlertRabbit {
     private static final Logger LOG = LogManager.getLogger(AlertRabbit.class.getName());
 
 
-    private static Connection init() {
+    private static Connection init(Properties cfg) {
         Connection cn;
         try {
-            Class.forName(read().getProperty("driver-class-name"));
+            Class.forName(cfg.getProperty("driver-class-name"));
             cn = DriverManager.getConnection(
-                    read().getProperty("url"),
-                    read().getProperty("username"),
-                    read().getProperty("password")
+                    cfg.getProperty("url"),
+                    cfg.getProperty("username"),
+                    cfg.getProperty("password")
             );
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    return cn;
+        return cn;
 
     }
+
     private static Properties read() {
         Properties cfg = new Properties();
         try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
@@ -47,17 +46,18 @@ public class AlertRabbit {
     }
 
     public static void main(String[] args) {
-
         try {
+            Properties cfg = read();
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
-            data.put("connection", init());
+            Connection connection = init(cfg);
+            data.put("connection", connection);
             JobDetail job = newJob(Rabbit.class)
                     .usingJobData(data)
                     .build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(Integer.parseInt(read().getProperty("rabbit.interval")))
+                    .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("rabbit.interval")))
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -66,7 +66,7 @@ public class AlertRabbit {
             scheduler.scheduleJob(job, trigger);
             Thread.sleep(10000);
             scheduler.shutdown();
-        } catch (Exception  se) {
+        } catch (Exception se) {
             LOG.info(se.getMessage());
         }
     }
@@ -76,17 +76,18 @@ public class AlertRabbit {
         public Rabbit() {
             System.out.println(hashCode());
         }
+
         @Override
         public void execute(JobExecutionContext context) {
             System.out.println("Rabbit runs here ...");
             Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("connection");
 
-                try (PreparedStatement ps = connection.prepareStatement("insert into rabbit (created_date) values (?)")) {
-                    ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-                    ps.execute();
-                } catch (SQLException e) {
-                    LOG.info(e.getMessage());
-                }
+            try (PreparedStatement ps = connection.prepareStatement("insert into rabbit (created_date) values (?)")) {
+                ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                ps.execute();
+            } catch (SQLException e) {
+                LOG.info(e.getMessage());
+            }
 
         }
     }
