@@ -20,11 +20,8 @@ public class AlertRabbit {
 
 
     private static Connection init(Properties cfg) throws ClassNotFoundException, SQLException {
-
         Class.forName(cfg.getProperty("driver-class-name"));
-
         return DriverManager.getConnection(cfg.getProperty("url"), cfg.getProperty("username"), cfg.getProperty("password"));
-
     }
 
     private static Properties read() {
