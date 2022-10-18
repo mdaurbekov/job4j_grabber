@@ -19,19 +19,11 @@ public class AlertRabbit {
     private static final Logger LOG = LogManager.getLogger(AlertRabbit.class.getName());
 
 
-    private static Connection init(Properties cfg) {
-        Connection cn;
-        try {
-            Class.forName(cfg.getProperty("driver-class-name"));
-            cn = DriverManager.getConnection(
-                    cfg.getProperty("url"),
-                    cfg.getProperty("username"),
-                    cfg.getProperty("password")
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return cn;
+    private static Connection init(Properties cfg) throws ClassNotFoundException, SQLException {
+
+        Class.forName(cfg.getProperty("driver-class-name"));
+
+        return DriverManager.getConnection(cfg.getProperty("url"), cfg.getProperty("username"), cfg.getProperty("password"));
 
     }
 
@@ -48,24 +40,25 @@ public class AlertRabbit {
     public static void main(String[] args) {
         try {
             Properties cfg = read();
-            Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
-            scheduler.start();
-            JobDataMap data = new JobDataMap();
-            Connection connection = init(cfg);
-            data.put("connection", connection);
-            JobDetail job = newJob(Rabbit.class)
-                    .usingJobData(data)
-                    .build();
-            SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("rabbit.interval")))
-                    .repeatForever();
-            Trigger trigger = newTrigger()
-                    .startNow()
-                    .withSchedule(times)
-                    .build();
-            scheduler.scheduleJob(job, trigger);
-            Thread.sleep(10000);
-            scheduler.shutdown();
+            try (Connection connection = init(cfg)) {
+                Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+                scheduler.start();
+                JobDataMap data = new JobDataMap();
+                data.put("connection", connection);
+                JobDetail job = newJob(Rabbit.class)
+                        .usingJobData(data)
+                        .build();
+                SimpleScheduleBuilder times = simpleSchedule()
+                        .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("rabbit.interval")))
+                        .repeatForever();
+                Trigger trigger = newTrigger()
+                        .startNow()
+                        .withSchedule(times)
+                        .build();
+                scheduler.scheduleJob(job, trigger);
+                Thread.sleep(10000);
+                scheduler.shutdown();
+            }
         } catch (Exception se) {
             LOG.info(se.getMessage());
         }
