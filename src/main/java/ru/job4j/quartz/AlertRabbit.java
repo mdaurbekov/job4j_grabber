@@ -15,7 +15,7 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
 public class AlertRabbit {
-
+/**/
     private static final Logger LOG = LogManager.getLogger(AlertRabbit.class.getName());
 
 
