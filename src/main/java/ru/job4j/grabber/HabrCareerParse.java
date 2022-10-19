@@ -16,7 +16,15 @@ public class HabrCareerParse {
 
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
 
-    private static final int MAX_NUMBER_PAGES = 5;
+    private static final int MAX_NUMBER_PAGES = 1;
+
+    private static String retrieveDescription(String link) throws IOException {
+        String rezult = "";
+        Document document = Jsoup.connect(link).get();
+        Element descriptionElement = document.select(".basic-section.basic-section--appearance-vacancy-description").first();
+        rezult = descriptionElement.text();
+        return rezult;
+    }
 
     public static void main(String[] args) throws IOException {
 
@@ -34,7 +42,13 @@ public class HabrCareerParse {
                 String vacancyName = titleElement.text();
                 String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
                 System.out.printf("Вакансия: %s, добавлено: %s, ссылка %s%n", vacancyName, data, link);
+                try {
+                    System.out.println(retrieveDescription(link));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             });
         }
+
     }
 }
