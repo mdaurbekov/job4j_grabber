@@ -10,7 +10,6 @@ import ru.job4j.grabber.utils.HabrCareerDateTimeParser;
 import ru.job4j.model.Post;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,48 +22,58 @@ public class HabrCareerParse implements Parse {
     private static final int MAX_NUMBER_PAGES = 5;
 
     private final DateTimeParser dateTimeParser;
-    private List<Post> list = new ArrayList<>();
+
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
     }
 
+    private Post getPost(Element element) throws IOException {
+        Element dateElement = element.select(".vacancy-card__date").first().child(0);
+        Element titleElement = element.select(".vacancy-card__title").first();
+        Element linkElement = titleElement.child(0);
+        String vacancyName = titleElement.text();
+        String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
+
+        return new Post(vacancyName, link, retrieveDescription(link), this.dateTimeParser.parse(dateElement.attr("datetime")));
+    }
+
     @Override
-    public List<Post> list(String link) throws IOException {
-        Document document = Jsoup.connect(link).get();
-        String title = document.select(".page-title__title").first().text();
-        LocalDateTime created = dateTimeParser.parse(document.attr("datetime"));
-        list.add(new Post(title, link, retrieveDescription(link), created));
+    public List<Post> list(String link) {
+        List<Post> list = new ArrayList<>();
+        for (int i = 1; i <= MAX_NUMBER_PAGES; i++) {
+            Connection connection = Jsoup.connect(link + i);
+            Document document = null;
+            try {
+                document = connection.get();
+            } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+            }
+            Elements rows = document.select(".vacancy-card__inner");
+            rows.forEach(row -> {
+                try {
+                    list.add(getPost(row));
+                } catch (IOException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+            });
+        }
         return list;
     }
 
     private static String retrieveDescription(String link) throws IOException {
         String rezult = "";
         Document document = Jsoup.connect(link).get();
-        Element descriptionElement = document.select("style-ugc").first();
+        Element descriptionElement = document.select(".style-ugc").first();
         rezult = descriptionElement.text();
+
         return rezult;
     }
 
-    public static void main(String[] args) throws IOException {
-
-        for (int i = 1; i <= MAX_NUMBER_PAGES; i++) {
-            Connection connection = Jsoup.connect(PAGE_LINK + i);
-            Document document = connection.get();
-            Elements rows = document.select(".vacancy-card__inner");
-
-            rows.forEach(row -> {
-                Element dateElement = row.select(".vacancy-card__date").first().child(0);
-                HabrCareerDateTimeParser habrCareerDateTimeParser = new HabrCareerDateTimeParser();
-                LocalDateTime data = habrCareerDateTimeParser.parse(dateElement.attr("datetime"));
-                Element titleElement = row.select(".vacancy-card__title").first();
-                Element linkElement = titleElement.child(0);
-                String vacancyName = titleElement.text();
-                String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-                System.out.printf("Вакансия: %s, добавлено: %s, ссылка %s%n", vacancyName, data, link);
-
-            });
-        }
+    public static void main(String[] args) {
+        List<Post> posts = new HabrCareerParse(new HabrCareerDateTimeParser()).list(PAGE_LINK);
+        System.out.println(posts.size());
 
     }
 }
