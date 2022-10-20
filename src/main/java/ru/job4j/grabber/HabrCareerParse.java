@@ -28,14 +28,15 @@ public class HabrCareerParse implements Parse {
         this.dateTimeParser = dateTimeParser;
     }
 
-    private Post getPost(Element element) throws IOException {
+    private Post getPost(Element element) {
         Element dateElement = element.select(".vacancy-card__date").first().child(0);
         Element titleElement = element.select(".vacancy-card__title").first();
         Element linkElement = titleElement.child(0);
         String vacancyName = titleElement.text();
         String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
 
-        return new Post(vacancyName, link, retrieveDescription(link), this.dateTimeParser.parse(dateElement.attr("datetime")));
+        return new Post(vacancyName, link, retrieveDescription(link),
+                this.dateTimeParser.parse(dateElement.attr("datetime")));
     }
 
     @Override
@@ -51,20 +52,21 @@ public class HabrCareerParse implements Parse {
             }
             Elements rows = document.select(".vacancy-card__inner");
             rows.forEach(row -> {
-                try {
-                    list.add(getPost(row));
-                } catch (IOException e) {
-                    throw new IllegalArgumentException(e);
-                }
+                list.add(getPost(row));
 
             });
         }
         return list;
     }
 
-    private static String retrieveDescription(String link) throws IOException {
+    private static String retrieveDescription(String link) {
         String rezult = "";
-        Document document = Jsoup.connect(link).get();
+        Document document = null;
+        try {
+            document = Jsoup.connect(link).get();
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
         Element descriptionElement = document.select(".style-ugc").first();
         rezult = descriptionElement.text();
 
