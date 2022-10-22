@@ -25,7 +25,8 @@ public class PsqlStore implements Store, AutoCloseable {
             throw new IllegalStateException(e);
         }
         try {
-            cnn = DriverManager.getConnection(cfg.getProperty("url"), cfg.getProperty("username"), cfg.getProperty("password"));
+            cnn = DriverManager.getConnection(cfg.getProperty("url"), cfg.getProperty("username"),
+                    cfg.getProperty("password"));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -33,7 +34,8 @@ public class PsqlStore implements Store, AutoCloseable {
 
     @Override
     public void save(Post post) {
-        try (PreparedStatement ps = cnn.prepareStatement("insert into posts (name, text, link, created) values (?, ?, ?, ?)")) {
+        try (PreparedStatement ps = cnn
+                .prepareStatement("insert into posts (name, text, link, created) values (?, ?, ?, ?) on conflict (link) do nothing")) {
             ps.setString(1, post.getTitle());
             ps.setString(2, post.getDescription());
             ps.setString(3, post.getLink());
@@ -63,7 +65,8 @@ public class PsqlStore implements Store, AutoCloseable {
     @Override
     public Post findById(int id) {
         Post rezult = null;
-        try (PreparedStatement ps = cnn.prepareStatement("select * from posts where id = ?")) {
+        try (PreparedStatement ps = cnn
+                .prepareStatement("select * from posts where id = ?")) {
             ps.setInt(1, id);
             try (ResultSet resultSet = ps.executeQuery()) {
                 if (resultSet.next()) {
@@ -97,21 +100,27 @@ public class PsqlStore implements Store, AutoCloseable {
         }
     }
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) {
         Properties cfg = new Properties();
-        try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
+        try (InputStream in = AlertRabbit.class.getClassLoader()
+                .getResourceAsStream("rabbit.properties")) {
             cfg.load(in);
         } catch (IOException e) {
             LOG.info(e.getMessage());
         }
-        PsqlStore psqlStore = new PsqlStore(cfg);
 
-        List<Post> posts = new HabrCareerParse(new HabrCareerDateTimeParser()).list("https://career.habr.com/vacancies/java_developer?page=");
-        posts.forEach(psqlStore::save);
+        try (PsqlStore psqlStore = new PsqlStore(cfg)) {
+            List<Post> posts = new HabrCareerParse(new HabrCareerDateTimeParser())
+                    .list("https://career.habr.com/vacancies/java_developer?page=");
+            posts.forEach(psqlStore::save);
 
-        psqlStore.getAll().forEach(System.out::println);
+            psqlStore.getAll().forEach(System.out::println);
 
-        System.out.println(psqlStore.findById(5));
+            System.out.println(psqlStore.findById(5));
+        } catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+
 
     }
 }
