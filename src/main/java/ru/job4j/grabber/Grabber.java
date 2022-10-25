@@ -30,7 +30,7 @@ public class Grabber implements Grab {
     }
 
     public void cfg() throws IOException {
-        try (InputStream in = Grabber.class.getClassLoader().getResourceAsStream("app.properties")) {
+        try (InputStream in = Grabber.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             cfg.load(in);
         }
     }
@@ -44,7 +44,7 @@ public class Grabber implements Grab {
                 .usingJobData(data)
                 .build();
         SimpleScheduleBuilder times = simpleSchedule()
-                .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("time")))
+                .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("rabbit.interval")))
                 .repeatForever();
         Trigger trigger = newTrigger()
                 .startNow()
