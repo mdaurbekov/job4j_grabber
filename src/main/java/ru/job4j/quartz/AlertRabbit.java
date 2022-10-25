@@ -46,7 +46,7 @@ public class AlertRabbit {
                         .usingJobData(data)
                         .build();
                 SimpleScheduleBuilder times = simpleSchedule()
-                        .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("rabbit.interval")))
+                        .withIntervalInSeconds(Integer.parseInt(cfg.getProperty("interval-in-seconds")))
                         .repeatForever();
                 Trigger trigger = newTrigger()
                         .startNow()
